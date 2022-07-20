@@ -14,7 +14,7 @@ Adicionar a dependência no arquivo `Cargo.toml`
 fbot_rust_client = { git = "https://github.com/vsssfbot/fbot_rust_client" }
 ```
 
-O codigo a abaixo obtem os valores do robo amarelo de id 0, e as informações da bola
+Vamos escrever o seguinte código no arquivo `src/main.js`. O codigo a abaixo obtem os valores do robo amarelo de id 0, e as informações da bola
 ```rust
 use fbot_rust_client::fira_protos;
 use fbot_rust_client::{ball, yellow_robot};
