@@ -1,0 +1,9 @@
+[package]
+name = "fbot_rust_client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytes = "1.1.0"
+prost = "0.10"
+prost-types = "0.10"
