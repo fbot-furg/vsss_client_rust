@@ -1,17 +1,47 @@
 
 use std::io::Cursor;
+use fira_protos::Environment;
 use prost::Message;
-use std::net::UdpSocket;
+use std::net::{IpAddr, UdpSocket};
+use multicast_socket::MulticastSocket;
+use crate::fira_protos::Commands;
+
+use std::net::SocketAddrV4;
 
 pub mod fira_protos;
 
 const VISION_ADDRS: &str = "224.0.0.1:10002";
 const COMMAND_ADDRS: &str = "127.0.0.1:20011";
 
-#[derive(Debug)]
-pub enum Team{
-    Yellow,
-    Blue
+
+// Create e class Communication as a Singleton
+
+pub struct Communication {
+    socket: MulticastSocket,
+    environment: Option<Environment>,
+}
+
+impl Communication {
+    pub fn new() -> Communication {
+        let mdns_multicast_address = SocketAddrV4::new([224, 0, 0, 1].into(), 10002);
+        let socket = MulticastSocket::all_interfaces(mdns_multicast_address)
+            .expect("could not create and bind socket");
+
+        Communication {
+            socket,
+            environment: None,
+        }
+    }
+
+    pub fn start(&mut self) {
+        loop {
+            if let Ok(message) = self.socket.receive() {
+                let env = deserialize_env(&message.data).unwrap();
+                println!("Received environment {:?}", env);
+                self.environment = Some(env);
+            };
+        }
+    }
 }
 
 pub fn serialize_packet(packet: &fira_protos::Packet) -> Vec<u8> {
@@ -28,30 +58,36 @@ pub fn deserialize_env(buf: &[u8]) -> Result<fira_protos::Environment, prost::De
 }
 
 pub fn send_command(commands: fira_protos::Commands) {
-    let socket_sender = UdpSocket::bind(VISION_ADDRS).unwrap();
+    {
+        let socket_sender = UdpSocket::bind(VISION_ADDRS).unwrap();
 
-    let packet = fira_protos::Packet {
-        cmd: Some(commands),
-        replace: None        
-    };
-    let buf = serialize_packet(&packet); 
+        let packet = fira_protos::Packet {
+            cmd: Some(commands),
+            replace: None        
+        };
+        let buf = serialize_packet(&packet); 
 
-    match socket_sender.send_to(&buf, COMMAND_ADDRS) {
-        Ok(_) => {},
-        Err(e) => {
-            println!("Error Send {}", e)
-        }
-    };
+        match socket_sender.send_to(&buf, COMMAND_ADDRS) {
+            Ok(_) => {},
+            Err(e) => {
+                println!("Error Send {}", e)
+            }
+        };
+    }
 }
 
 fn frame() -> Option<fira_protos::Frame>{
-    let socket = UdpSocket::bind(VISION_ADDRS).unwrap();
-    let mut buf = [0; 1024];
+    let env = {
+        let mut buf = [0; 1024];
 
-    let (len, _) = socket.recv_from(&mut buf).unwrap();
+        let socket = UdpSocket::bind(VISION_ADDRS).unwrap();
 
-    let env = deserialize_env(&buf[..len]).unwrap();
+        let (len, _) = socket.recv_from(&mut buf).unwrap();    
 
+        deserialize_env(&buf[..len]).unwrap()
+    };
+
+    
     env.frame
 }
 
