@@ -37,7 +37,7 @@ fn main() {
                 robot_commands: vec![
                     fira_protos::Command {
                         id: 0,
-                        yellowteam: true,
+                        yellowteam: false,
                         wheel_left: vel_left,
                         wheel_right: vel_right
                     },

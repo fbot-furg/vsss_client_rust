@@ -1,11 +1,8 @@
-
-use std::{io::Cursor, iter::empty};
+use std::{io::Cursor};
 use prost::Message;
-use prost_types::EnumValueOptions;
-use std::net::{UdpSocket};
-use multicast_socket::MulticastSocket;
+use multicast_socket::{MulticastSocket, Interface};
 
-use std::net::SocketAddrV4;
+use std::net::{SocketAddrV4, UdpSocket};
 
 pub mod fira_protos {
     include!(concat!(env!("OUT_DIR"), "/fira_message.rs"));
@@ -16,35 +13,22 @@ pub mod ref_protos {
     
 }
 
-const VISION_ADDRS: &str = "224.0.0.1:10002";
+const VISION_ADDRS: &str = "224.0.0.1:10010";
 const COMMAND_ADDRS: &str = "127.0.0.1:20011";
-
-
-// Create e class Communication as a Singleton
 
 pub struct FIRASim {
     socket: MulticastSocket,
-    // environment: fira_protos::Environment,
 }
 
 impl FIRASim {
     
     pub fn new() -> FIRASim {
-        let mdns_multicast_address = SocketAddrV4::new([224, 0, 0, 1].into(), 10002);
-        let socket = MulticastSocket::all_interfaces(mdns_multicast_address)
+        let socket = SocketAddrV4::new([224, 0, 0, 1].into(), 10002);
+        let socket = MulticastSocket::all_interfaces(socket)
             .expect("could not create and bind socket");
-
-        let empty_environment = fira_protos::Environment {
-            step: 0,
-            frame: None,
-            field: None,
-            goals_blue: 0,
-            goals_yellow: 0,
-        };
 
         FIRASim {
             socket,
-            // environment: empty_environment,
         }
     }
 
@@ -61,15 +45,6 @@ impl FIRASim {
         packet.encode(&mut buf).unwrap();
         buf
     }
-
-    // pub fn start(&mut self) {
-    //     loop {
-    //         if let Ok(message) = self.socket.receive() {
-    //             let env = self.deserialize_env(&message.data).unwrap();
-    //             self.environment = env;
-    //         };
-    //     }
-    // }
 
     pub fn send_command(&self, commands: fira_protos::Commands) {
         {
@@ -134,11 +109,31 @@ impl FIRASim {
             None => empty_ball,
         }
     }
+
+    pub fn yellow_robot(&self, id: &u32) -> Option<fira_protos::Robot> {
+        let mut robot = None;
+        for r in self.frame().robots_yellow {
+            if r.robot_id == *id {
+                robot = Some(r);
+            }
+        }
+        robot
+    }
+
+    pub fn blue_robot(&self, id: &u32) -> Option<fira_protos::Robot> {
+        let mut robot = None;
+        for r in self.frame().robots_blue {
+            if r.robot_id == *id {
+                robot = Some(r);
+            }
+        }
+        robot
+    }
+
 }
 
 pub struct Referee {
     socket: MulticastSocket,
-    referee: ref_protos::VssRefCommand,
 }
 
 impl Referee {
@@ -148,17 +143,8 @@ impl Referee {
         let socket = MulticastSocket::all_interfaces(mdns_multicast_address)
             .expect("could not create and bind socket");
 
-        let empty_referee = ref_protos::VssRefCommand {
-            foul: 0,
-            teamcolor: 0,
-            foul_quadrant: 0,
-            timestamp: 0.0,
-            game_half: 0,
-        };
-
         Referee {
             socket,
-            referee: empty_referee,
         }
     }
 
@@ -167,15 +153,6 @@ impl Referee {
         let ref_cmd = ref_protos::VssRefCommand::decode(&mut cursor)?;
         Ok(ref_cmd)
     }
-
-    // pub fn start(&mut self) {
-    //     loop {
-    //         if let Ok(message) = self.socket.receive() {
-    //             let referee = self.deserialize_ref(&message.data).unwrap();
-    //             self.referee = referee;
-    //         };
-    //     }
-    // }
 
     pub fn referee(&self) -> ref_protos::VssRefCommand {
         if let Ok(message) = self.socket.receive() {
