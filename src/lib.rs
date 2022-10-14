@@ -48,20 +48,22 @@ impl FIRASim {
 
     pub fn send_command(&self, commands: fira_protos::Commands) {
         {
-            let socket_sender = UdpSocket::bind(VISION_ADDRS).unwrap();
-    
-            let packet = fira_protos::Packet {
-                cmd: Some(commands),
-                replace: None        
-            };
-            let buf = self.serialize_packet(packet); 
-    
-            match socket_sender.send_to(&buf, COMMAND_ADDRS) {
-                Ok(_) => {},
-                Err(e) => {
-                    println!("Error Send {}", e)
-                }
-            };
+            if let Ok(socket) = UdpSocket::bind(VISION_ADDRS) {
+                let packet = fira_protos::Packet {
+                    cmd: Some(commands),
+                    replace: None        
+                };
+                let buf = self.serialize_packet(packet); 
+        
+                match socket.send_to(&buf, COMMAND_ADDRS) {
+                    Ok(_) => {},
+                    Err(e) => {
+                        println!("Error Send {}", e)
+                    }
+                };
+            } else {
+                println!("Error Bind");
+            }
         }
     }
 
