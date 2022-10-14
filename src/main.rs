@@ -1,9 +1,14 @@
-use fbot_rust_client::{Communication};
-
+use fbot_rust_client::{FIRASim, Referee};
 
 fn main() {
-    let mut a = Communication::new();
-    a.start();
+    let sim = FIRASim::new();
+    let referee = Referee::new();
 
-    print!("Hello, world!");
+    loop {
+        let ball = sim.ball();
+        let referee = referee.referee();
+
+        println!("Ball: {:?}", ball);
+        println!("Referee: {:?}", referee);
+    }
 }

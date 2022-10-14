@@ -13,3 +13,6 @@ prost-types = "0.10"
 socket2 = { version = "0.3.4", features = ["reuseport"] }
 lazy_static = "1.0"
 multicast-socket = "0.2.1"
+
+[build-dependencies]
+prost-build = "0.10.4"
