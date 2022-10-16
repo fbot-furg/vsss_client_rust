@@ -4,11 +4,11 @@ fn main() {
     let sim = FIRASim::new();
     let referee = Referee::new();
 
-    loop {
-        let ball = sim.ball();
-        let referee = referee.referee();
+    sim.start();
+    referee.start();
 
-        println!("Ball: {:?}", ball);
-        println!("Referee: {:?}", referee);
+    loop {
+        println!("foul: {:?}", referee.foul());
+        println!("ball: {:?}", sim.ball());
     }
 }
