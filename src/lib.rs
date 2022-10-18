@@ -159,24 +159,45 @@ impl FIRASim {
         }
     }
 
-    pub fn yellow_robot(&self, id: &u32) -> Option<fira_protos::Robot> {
-        let mut robot = None;
-        for r in self.frame().robots_yellow {
-            if r.robot_id == *id {
-                robot = Some(r);
-            }
+    pub fn yellow_robot(&self, id: &u32) -> fira_protos::Robot {
+        
+        let empty_robot = fira_protos::Robot {
+            robot_id: 0,
+            x: 0.0,
+            y: 0.0,
+            orientation: 0.0,
+            vx: 0.0,
+            vy: 0.0,
+            vorientation: 0.0,
+        };
+
+        let yellow_robots = self.frame().robots_yellow;
+
+        match  yellow_robots.iter().find(|robot| robot.robot_id == *id) {
+            Some(robot) => robot.clone(),
+            None => empty_robot,
+            
         }
-        robot
     }
 
-    pub fn blue_robot(&self, id: &u32) -> Option<fira_protos::Robot> {
-        let mut robot = None;
-        for r in self.frame().robots_blue {
-            if r.robot_id == *id {
-                robot = Some(r);
-            }
+    pub fn blue_robot(&self, id: &u32) -> fira_protos::Robot {
+        let empty_robot = fira_protos::Robot {
+            robot_id: 0,
+            x: 0.0,
+            y: 0.0,
+            orientation: 0.0,
+            vx: 0.0,
+            vy: 0.0,
+            vorientation: 0.0,
+        };
+
+        let blue_robots = self.frame().robots_blue;
+
+        match  blue_robots.iter().find(|robot| robot.robot_id == *id) {
+            Some(robot) => robot.clone(),
+            None => empty_robot,
+            
         }
-        robot
     }
 
 }
