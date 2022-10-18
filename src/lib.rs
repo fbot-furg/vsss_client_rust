@@ -35,8 +35,19 @@ lazy_static! {
             
         socket
     };
-}
 
+    pub static ref FIRASIM: FIRASim = {
+        let sim = FIRASim::new();
+        sim.start();
+        sim
+    };
+
+    pub static ref REFEREE: Referee = {
+        let referee = Referee::new();
+        referee.start();
+        referee
+    };
+}
 
 const VISION_ADDRS: &str = "224.0.0.1:10010";
 const COMMAND_ADDRS: &str = "127.0.0.1:20011";
@@ -62,17 +73,12 @@ fn serialize_packet(packet: fira_protos::Packet) -> Vec<u8> {
 }
 
 pub struct FIRASim {
-    // socket: MulticastSocket,
     env: Arc<Mutex<fira_protos::Environment>>,
 }
 
 impl FIRASim {
     
     pub fn new() -> FIRASim {
-        // let socket = SocketAddrV4::new([224, 0, 0, 1].into(), 10002);
-        // let socket = MulticastSocket::all_interfaces(socket)
-        //     .expect("could not create and bind socket");
-
         let empty_env = fira_protos::Environment {
             step: 0,
             frame: None,
@@ -82,7 +88,6 @@ impl FIRASim {
         };
 
         FIRASim {
-            // socket,
             env: Arc::new(Mutex::new(empty_env)),
         }
     }

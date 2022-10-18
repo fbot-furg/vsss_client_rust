@@ -1,14 +1,8 @@
-use fbot_rust_client::{FIRASim, Referee};
+use fbot_rust_client::{FIRASIM, REFEREE};
 
 fn main() {
-    let sim = FIRASim::new();
-    let referee = Referee::new();
-
-    sim.start();
-    referee.start();
-
     loop {
-        println!("foul: {:?}", referee.foul());
-        println!("ball: {:?}", sim.ball());
+        println!("FIRASIM: {:?}", FIRASIM.ball());
+        println!("REFEREE: {:?}", REFEREE.foul());
     }
 }
