@@ -1,8 +1,7 @@
-use fbot_rust_client::{FIRASIM, REFEREE};
+use fbot_rust_client::{SSLVISION};
 
 fn main() {
     loop {
-        println!("FIRASIM: {:?}", FIRASIM.ball());
-        println!("REFEREE: {:?}", REFEREE.foul());
+        println!("SSLVISION balls: {:?}", SSLVISION.vision());
     }
 }
