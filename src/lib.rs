@@ -1,4 +1,3 @@
-use std::iter::empty;
 use std::{io::Cursor};
 use prost::Message;
 use multicast_socket::{MulticastSocket};
@@ -16,7 +15,10 @@ pub mod fira_protos {
 
 pub mod ref_protos {
     include!(concat!(env!("OUT_DIR"), "/vssref.rs"));
-    
+}
+
+pub mod ssl_vision_protos {
+    include!(concat!(env!("OUT_DIR"), "/_.rs"));
 }
 
 lazy_static! {
@@ -36,6 +38,14 @@ lazy_static! {
         socket
     };
 
+    pub static ref SOCKET_SSLVISION: MulticastSocket = {
+        let socket = SocketAddrV4::new([224, 5, 23, 2].into(), 10006);
+        let socket = MulticastSocket::all_interfaces(socket)
+            .expect("could not create and bind socket");
+            
+        socket
+    };
+
     pub static ref FIRASIM: FIRASim = {
         let sim = FIRASim::new();
         sim.start();
@@ -46,6 +56,12 @@ lazy_static! {
         let referee = Referee::new();
         referee.start();
         referee
+    };
+
+    pub static ref SSLVISION: SSLVision = {
+        let ssl_vision = SSLVision::new();
+        ssl_vision.start();
+        ssl_vision
     };
 }
 
@@ -62,6 +78,12 @@ fn deserialize_ref(data: &[u8]) -> Result<ref_protos::VssRefCommand, prost::Deco
     let mut cursor = Cursor::new(data);
     let ref_cmd = ref_protos::VssRefCommand::decode(&mut cursor)?;
     Ok(ref_cmd)
+}
+
+fn deserialize_ssl(data: &[u8]) -> Result<ssl_vision_protos::SslWrapperPacket, prost::DecodeError> {
+    let mut cursor = Cursor::new(data);
+    let ssl_cmd = ssl_vision_protos::SslWrapperPacket::decode(&mut cursor)?;
+    Ok(ssl_cmd)
 }
 
 fn serialize_packet(packet: fira_protos::Packet) -> Vec<u8> {
@@ -262,4 +284,50 @@ impl Referee {
         }
     }
 }
+
+
+pub struct SSLVision {
+    vision: Arc<Mutex<ssl_vision_protos::SslWrapperPacket>>,
+}
+
+impl SSLVision {
+    
+    pub fn new() -> SSLVision {
+        let empty_vision = ssl_vision_protos::SslWrapperPacket {
+            detection: None,
+            geometry: None,
+        };
+        
+        SSLVision {
+            vision: Arc::new(Mutex::new(empty_vision))
+        }
+    }
+
+    pub fn start(&self) {
+        let vision = self.vision.clone();
+
+        spawn(move || {
+            loop {
+                if let Ok(message) = SOCKET_SSLVISION.receive() {
+                    let mut vision = vision.lock().unwrap();
+
+                    let vision_message = match deserialize_ssl(&message.data) {
+                       Ok(vision) => vision,
+                       Err(_) => continue
+                    };
+                    
+                    *vision = vision_message;
+                }
+            }
+        });
+    }
+
+    pub fn vision(&self) -> ssl_vision_protos::SslWrapperPacket {
+        let locked_value = self.vision.lock().unwrap();
+
+        locked_value.clone()
+    }
+}
+
+
 
