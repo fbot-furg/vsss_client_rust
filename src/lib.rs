@@ -1,3 +1,4 @@
+use std::iter::empty;
 use std::{io::Cursor};
 use prost::Message;
 use multicast_socket::{MulticastSocket};
@@ -223,7 +224,6 @@ impl FIRASim {
         match  blue_robots.iter().find(|robot| robot.robot_id == *id) {
             Some(robot) => robot.clone(),
             None => empty_robot,
-            
         }
     }
 
@@ -267,6 +267,7 @@ impl Referee {
 
     pub fn referee(&self) -> ref_protos::VssRefCommand {
         let locked_value = self.referee.lock().unwrap();
+
         locked_value.clone()
     }
 
@@ -287,45 +288,122 @@ impl Referee {
 
 
 pub struct SSLVision {
-    vision: Arc<Mutex<ssl_vision_protos::SslWrapperPacket>>,
+    wrapper: Arc<Mutex<ssl_vision_protos::SslWrapperPacket>>,
 }
 
 impl SSLVision {
     
     pub fn new() -> SSLVision {
-        let empty_vision = ssl_vision_protos::SslWrapperPacket {
+        let empty_wrapper = ssl_vision_protos::SslWrapperPacket {
             detection: None,
             geometry: None,
         };
         
         SSLVision {
-            vision: Arc::new(Mutex::new(empty_vision))
+            wrapper: Arc::new(Mutex::new(empty_wrapper))
         }
     }
 
     pub fn start(&self) {
-        let vision = self.vision.clone();
+        let wrapper = self.wrapper.clone();
 
         spawn(move || {
             loop {
                 if let Ok(message) = SOCKET_SSLVISION.receive() {
-                    let mut vision = vision.lock().unwrap();
+                    let mut wrapper = wrapper.lock().unwrap();
 
-                    let vision_message = match deserialize_ssl(&message.data) {
-                       Ok(vision) => vision,
+                    let wrapper_message = match deserialize_ssl(&message.data) {
+                       Ok(wrapper) => wrapper,
                        Err(_) => continue
                     };
                     
-                    *vision = vision_message;
+                    *wrapper = wrapper_message;
                 }
             }
         });
     }
 
-    pub fn vision(&self) -> ssl_vision_protos::SslWrapperPacket {
-        let locked_value = self.vision.lock().unwrap();
+    pub fn wrapper(&self) -> ssl_vision_protos::SslWrapperPacket {
+        let locked_value = self.wrapper.lock().unwrap();
 
         locked_value.clone()
+    }
+
+    
+
+    pub fn detection(&self) -> ssl_vision_protos::SslDetectionFrame {
+        let empty_detection = ssl_vision_protos::SslDetectionFrame {
+            frame_number: 0,
+            t_capture: 0.0,
+            t_sent: 0.0,
+            camera_id: 0,
+            balls: Vec::new(),
+            robots_yellow: Vec::new(),
+            robots_blue: Vec::new(),
+        };
+
+        match self.wrapper().detection {
+            Some(detection) => detection.clone(),
+            None => empty_detection,
+        }
+    }
+
+    pub fn ball(&self) -> ssl_vision_protos::SslDetectionBall {
+        let empty_ball = ssl_vision_protos::SslDetectionBall {
+            confidence: 0.0,
+            area: None,
+            x: 0.0,
+            y: 0.0,
+            z: None,
+            pixel_x: 0.0,
+            pixel_y: 0.0,
+        };
+
+        match self.detection().balls.first() {
+            Some(ball) => ball.clone(),
+            None => empty_ball,
+        }
+    }
+
+    pub fn yellow_robot(&self, id: &u32) -> ssl_vision_protos::SslDetectionRobot {
+        let empty_robot = ssl_vision_protos::SslDetectionRobot {
+            confidence: 0.0,
+            robot_id: None,
+            x: 0.0,
+            y: 0.0,
+            orientation: None,
+            pixel_x: 0.0,
+            pixel_y: 0.0,
+            height: None,
+        };
+
+        let yellow_robots = self.detection().robots_yellow;
+
+        match  yellow_robots.iter().find(|robot| robot.robot_id == Some(*id)) {
+            Some(robot) => robot.clone(),
+            None => empty_robot,
+            
+        }
+    }
+
+    pub fn blue_robot(&self, id: &u32) -> ssl_vision_protos::SslDetectionRobot {
+        let empty_robot = ssl_vision_protos::SslDetectionRobot {
+            confidence: 0.0,
+            robot_id: None,
+            x: 0.0,
+            y: 0.0,
+            orientation: None,
+            pixel_x: 0.0,
+            pixel_y: 0.0,
+            height: None,
+        };
+
+        let blue_robots = self.detection().robots_blue;
+
+        match  blue_robots.iter().find(|robot| robot.robot_id == Some(*id)) {
+            Some(robot) => robot.clone(),
+            None => empty_robot,
+        }
     }
 }
 
