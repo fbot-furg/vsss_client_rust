@@ -1,4 +1,3 @@
-use std::iter::empty;
 use std::{io::Cursor};
 use prost::Message;
 use multicast_socket::{MulticastSocket};
@@ -9,6 +8,8 @@ use std::sync::{Arc, Mutex};
 use std::net::{SocketAddrV4, UdpSocket};
 
 use lazy_static::lazy_static;
+
+use serialport::{SerialPort, SerialPortType};
 
 pub mod fira_protos {
     include!(concat!(env!("OUT_DIR"), "/fira_message.rs"));
@@ -64,6 +65,8 @@ lazy_static! {
         ssl_vision.start();
         ssl_vision
     };
+
+    pub static ref SERIAL: Serial =  Serial::new();
 }
 
 const VISION_ADDRS: &str = "224.0.0.1:10010";
@@ -407,5 +410,21 @@ impl SSLVision {
     }
 }
 
+pub struct Serial {
+    port: SerialPort,
+}
 
+impl Serial {
+    pub fn new() -> Serial {
+        let port = serialport::new("/dev/ttyUSB0", 9600)
+            .timeout(Duration::from_millis(10))
+            .open().expect("Failed to open port");
 
+        Serial { port }
+    }
+
+    pub fn send(&mut self, speed: &[u8; 2]) {
+        let data: [u8; 4] = [5, speed[0]+127, speed[1]+127, 15]; 
+        self.port.write(&data).expect("Failed to write to port");
+    }
+}
