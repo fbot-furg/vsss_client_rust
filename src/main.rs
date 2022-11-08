@@ -2,6 +2,7 @@ use fbot_rust_client::{SSLVISION};
 
 fn main() {
     loop {
-        println!("SSLVISION ball: {:?}", SSLVISION.ball());
+        println!("SSLVISION Robot: {:?}", SSLVISION.blue_robot(&0));
+        // println!("SSLVISION ball: {:?}", SSLVISION.ball());
     }
 }
