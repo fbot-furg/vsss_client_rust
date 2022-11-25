@@ -9,9 +9,8 @@ use std::net::{SocketAddrV4, UdpSocket};
 
 use lazy_static::lazy_static;
 
-use serialport::{SerialPort, SerialPortType};
-
-use std::time::Duration;
+// use serialport::{SerialPort, SerialPortType};
+// use std::time::Duration;
 
 pub mod fira_protos {
     include!(concat!(env!("OUT_DIR"), "/fira_message.rs"));
@@ -98,6 +97,24 @@ fn serialize_packet(packet: fira_protos::Packet) -> Vec<u8> {
     buf
 }
 
+impl fira_protos::Command {
+    pub fn new(id: u32, yellowteam: bool, wheel_left: f64, wheel_right: f64) -> fira_protos::Command {
+        fira_protos::Command {
+            id,
+            yellowteam,
+            wheel_left,
+            wheel_right,
+        }
+    }
+}
+
+impl fira_protos::Commands {
+    pub fn new(commands: Vec<fira_protos::Command>) -> fira_protos::Commands {
+        fira_protos::Commands { robot_commands : commands }
+    }
+}
+
+
 pub struct FIRASim {
     env: Arc<Mutex<fira_protos::Environment>>,
 }
@@ -105,13 +122,7 @@ pub struct FIRASim {
 impl FIRASim {
     
     pub fn new() -> FIRASim {
-        let empty_env = fira_protos::Environment {
-            step: 0,
-            frame: None,
-            field: None,
-            goals_blue: 0,
-            goals_yellow: 0,
-        };
+        let empty_env = fira_protos::Environment::default();
 
         FIRASim {
             env: Arc::new(Mutex::new(empty_env)),
@@ -134,8 +145,10 @@ impl FIRASim {
         });
     }
 
-    pub fn send_command(&self, commands: fira_protos::Commands) {
+    pub fn send_command(&self, commands: Vec<fira_protos::Command>) {
         {
+            let commands = fira_protos::Commands::new(commands);
+
             if let Ok(socket) = UdpSocket::bind(VISION_ADDRS) {
                 let packet = fira_protos::Packet {
                     cmd: Some(commands),
@@ -162,11 +175,7 @@ impl FIRASim {
 
 
     pub fn frame(&self) -> fira_protos::Frame{
-        let empty_frame = fira_protos::Frame {
-            ball: None,
-            robots_yellow: Vec::new(),
-            robots_blue: Vec::new(),
-        };
+        let empty_frame = fira_protos::Frame::default();
 
         match self.environment().frame {
             Some(frame) => frame.clone(),
@@ -175,14 +184,7 @@ impl FIRASim {
     }
 
     pub fn ball(&self) -> fira_protos::Ball {
-        let empty_ball = fira_protos::Ball {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-            vx: 0.0,
-            vy: 0.0,
-            vz: 0.0,
-        };
+        let empty_ball = fira_protos::Ball::default();
 
         match self.frame().ball {
             Some(ball) => ball.clone(),
@@ -190,17 +192,16 @@ impl FIRASim {
         }
     }
 
+    pub fn yellow_robots(&self) -> Vec<fira_protos::Robot> {
+        self.frame().robots_blue.clone()
+    }
+
+    pub fn blue_robots(&self) -> Vec<fira_protos::Robot> {
+        self.frame().robots_yellow.clone()
+    }
+
     pub fn yellow_robot(&self, id: &u32) -> fira_protos::Robot {
-        
-        let empty_robot = fira_protos::Robot {
-            robot_id: 0,
-            x: 0.0,
-            y: 0.0,
-            orientation: 0.0,
-            vx: 0.0,
-            vy: 0.0,
-            vorientation: 0.0,
-        };
+        let empty_robot = fira_protos::Robot::default();
 
         let yellow_robots = self.frame().robots_yellow;
 
@@ -212,15 +213,7 @@ impl FIRASim {
     }
 
     pub fn blue_robot(&self, id: &u32) -> fira_protos::Robot {
-        let empty_robot = fira_protos::Robot {
-            robot_id: 0,
-            x: 0.0,
-            y: 0.0,
-            orientation: 0.0,
-            vx: 0.0,
-            vy: 0.0,
-            vorientation: 0.0,
-        };
+        let empty_robot = fira_protos::Robot::default();
 
         let blue_robots = self.frame().robots_blue;
 
@@ -229,7 +222,6 @@ impl FIRASim {
             None => empty_robot,
         }
     }
-
 }
 
 pub struct Referee {
@@ -332,8 +324,6 @@ impl SSLVision {
         locked_value.clone()
     }
 
-    
-
     pub fn detection(&self) -> ssl_vision_protos::SslDetectionFrame {
         let empty_detection = ssl_vision_protos::SslDetectionFrame {
             frame_number: 0,
@@ -368,6 +358,14 @@ impl SSLVision {
         }
     }
 
+    pub fn yellow_robots(&self) -> Vec<ssl_vision_protos::SslDetectionRobot> {
+        self.detection().robots_yellow.clone()
+    }
+
+    pub fn blue_robots(&self) -> Vec<ssl_vision_protos::SslDetectionRobot> {
+        self.detection().robots_blue.clone()
+    }
+
     pub fn yellow_robot(&self, id: &u32) -> ssl_vision_protos::SslDetectionRobot {
         let empty_robot = ssl_vision_protos::SslDetectionRobot {
             confidence: 0.0,
@@ -385,7 +383,6 @@ impl SSLVision {
         match  yellow_robots.iter().find(|robot| robot.robot_id == Some(*id)) {
             Some(robot) => robot.clone(),
             None => empty_robot,
-            
         }
     }
 

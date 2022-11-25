@@ -1,6 +1,6 @@
 [package]
-name = "fbot_rust_client"
-version = "0.6.0"
+name = "vsss_rust_client"
+version = "0.6.1"
 edition = "2021"
 
 [dependencies]
