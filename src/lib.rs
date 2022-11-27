@@ -193,11 +193,11 @@ impl FIRASim {
     }
 
     pub fn yellow_robots(&self) -> Vec<fira_protos::Robot> {
-        self.frame().robots_blue.clone()
+        self.frame().robots_yellow.clone()
     }
 
     pub fn blue_robots(&self) -> Vec<fira_protos::Robot> {
-        self.frame().robots_yellow.clone()
+        self.frame().robots_blue.clone()
     }
 
     pub fn yellow_robot(&self, id: &u32) -> fira_protos::Robot {
