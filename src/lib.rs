@@ -71,6 +71,9 @@ lazy_static! {
 const VISION_ADDRS: &str = "224.0.0.1:10010";
 const COMMAND_ADDRS: &str = "127.0.0.1:20011";
 
+
+//Serialize class
+//Desserialize class
 fn deserialize_env(data: &[u8]) -> Result<fira_protos::Environment, prost::DecodeError> {
     let mut cursor = Cursor::new(data);
     let env = fira_protos::Environment::decode(&mut cursor)?;
@@ -96,24 +99,6 @@ fn serialize_packet(packet: fira_protos::Packet) -> Vec<u8> {
     packet.encode(&mut buf).unwrap();
     buf
 }
-
-impl fira_protos::Command {
-    pub fn new(id: u32, yellowteam: bool, wheel_left: f64, wheel_right: f64) -> fira_protos::Command {
-        fira_protos::Command {
-            id,
-            yellowteam,
-            wheel_left,
-            wheel_right,
-        }
-    }
-}
-
-impl fira_protos::Commands {
-    pub fn new(commands: Vec<fira_protos::Command>) -> fira_protos::Commands {
-        fira_protos::Commands { robot_commands : commands }
-    }
-}
-
 
 pub struct FIRASim {
     env: Arc<Mutex<fira_protos::Environment>>,
@@ -425,3 +410,51 @@ impl SSLVision {
 //         self.port.write(&data).expect("Failed to write to port");
 //     }
 // }
+
+impl fira_protos::Command {
+    pub fn new(id: u32, yellowteam: bool, wheel_left: f64, wheel_right: f64) -> fira_protos::Command {
+        fira_protos::Command {
+            id,
+            yellowteam,
+            wheel_left,
+            wheel_right,
+        }
+    }
+}
+
+impl fira_protos::Commands {
+    pub fn new(commands: Vec<fira_protos::Command>) -> fira_protos::Commands {
+        fira_protos::Commands { robot_commands : commands }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_command() {
+        let cmd_new = fira_protos::Command::new(1, true, 0.0, 0.0);
+        let cmd = fira_protos::Command {
+            id: 1,
+            yellowteam: true,
+            wheel_left: 0.0,
+            wheel_right: 0.0,
+        };
+
+        assert_eq!(cmd_new, cmd);
+    }
+
+    #[test]
+    fn new_commands() {
+        let cmd_new = fira_protos::Commands::new(vec![fira_protos::Command::new(1, true, 0.0, 0.0)]);
+        let cmd = fira_protos::Commands { robot_commands : vec![fira_protos::Command {
+            id: 1,
+            yellowteam: true,
+            wheel_left: 0.0,
+            wheel_right: 0.0,
+        }] };
+
+        assert_eq!(cmd_new, cmd);
+    }
+}
