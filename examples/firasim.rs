@@ -7,8 +7,8 @@ fn main() {
 
         let ball = FIRASIM.ball();
 
-        println!("FIRASIM Robot: {:?}", my_robot);
-        println!("FIRASIM Enemy Robot: {:?}", enemy_robot);
-        println!("FIRASIM Ball: {:?}", ball);
+        println!("Robot x:{} y:{}", my_robot.x, my_robot.y);
+        println!("Enemy Robot: x:{} y:{}", enemy_robot.x, enemy_robot.y);
+        println!("Ball: x:{} y:{}", ball.x, ball.y);
     }
 }

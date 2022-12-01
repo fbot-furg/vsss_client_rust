@@ -71,33 +71,22 @@ lazy_static! {
 const VISION_ADDRS: &str = "224.0.0.1:10010";
 const COMMAND_ADDRS: &str = "127.0.0.1:20011";
 
+struct Serializer {}
 
-//Serialize class
-//Desserialize class
-fn deserialize_env(data: &[u8]) -> Result<fira_protos::Environment, prost::DecodeError> {
-    let mut cursor = Cursor::new(data);
-    let env = fira_protos::Environment::decode(&mut cursor)?;
-    Ok(env)
-}
+impl Serializer  {
+    pub fn serialize<T>(data: &T) -> Vec<u8> where T: Message {
+        let mut buf = Vec::new();
+        // buf.reserve(packet.encoded_len());
 
-fn deserialize_ref(data: &[u8]) -> Result<ref_protos::VssRefCommand, prost::DecodeError> {
-    let mut cursor = Cursor::new(data);
-    let ref_cmd = ref_protos::VssRefCommand::decode(&mut cursor)?;
-    Ok(ref_cmd)
-}
+        data.encode(&mut buf).unwrap();
+        buf
+    }
 
-fn deserialize_ssl(data: &[u8]) -> Result<ssl_vision_protos::SslWrapperPacket, prost::DecodeError> {
-    let mut cursor = Cursor::new(data);
-    let ssl_cmd = ssl_vision_protos::SslWrapperPacket::decode(&mut cursor)?;
-    Ok(ssl_cmd)
-}
-
-fn serialize_packet(packet: fira_protos::Packet) -> Vec<u8> {
-    let mut buf = Vec::new();
-    buf.reserve(packet.encoded_len());
-
-    packet.encode(&mut buf).unwrap();
-    buf
+    pub fn deserialize<T>(data: &[u8]) -> Result<T, prost::DecodeError> where T: Message + Default {
+        let mut buf = Cursor::new(data);
+        let ret = T::decode(&mut buf)?;
+        Ok(ret)
+    }
 }
 
 pub struct FIRASim {
@@ -122,7 +111,7 @@ impl FIRASim {
                 if let Ok(message) = SOCKET_VISION.receive() {
                     let mut env = env.lock().unwrap();
 
-                    let env_message = deserialize_env(&message.data).unwrap();
+                    let env_message = Serializer::deserialize(&message.data).unwrap();
                     
                     *env = env_message;
                 }
@@ -139,7 +128,7 @@ impl FIRASim {
                     cmd: Some(commands),
                     replace: None        
                 };
-                let buf = serialize_packet(packet); 
+                let buf = Serializer::serialize(&packet); 
         
                 match socket.send_to(&buf, COMMAND_ADDRS) {
                     Ok(_) => {},
@@ -237,7 +226,7 @@ impl Referee {
                 if let Ok(message) = SOCKET_REFEREE.receive() {
                     let mut referee = referee.lock().unwrap();
 
-                    let ref_message = deserialize_ref(&message.data).unwrap();
+                    let ref_message = Serializer::deserialize(&message.data).unwrap();
                     
                     *referee = ref_message;
                 }
@@ -292,7 +281,7 @@ impl SSLVision {
                 if let Ok(message) = SOCKET_SSLVISION.receive() {
                     let mut wrapper = wrapper.lock().unwrap();
 
-                    let wrapper_message = match deserialize_ssl(&message.data) {
+                    let wrapper_message = match Serializer::deserialize(&message.data) {
                        Ok(wrapper) => wrapper,
                        Err(_) => continue
                     };
